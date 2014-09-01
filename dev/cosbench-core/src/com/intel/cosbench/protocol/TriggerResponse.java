@@ -15,12 +15,31 @@ See the License for the specific language governing permissions and
 limitations under the License. 
 */ 
 
-package com.intel.cosbench.api.storage;
 
-public interface StorageConstants {
+package com.intel.cosbench.protocol;
 
-    String LOGGING_KEY = "logging";
+public class TriggerResponse extends Response{
+	private String PID;
+	private String scriptLog;
 
-    Boolean LOGGING_DEFAULT = Boolean.TRUE;
+	public TriggerResponse() {
+		/*empty*/
+	}
+
+	public String getPID() {
+		return PID;
+	}
+
+	public void setPID(String pID) {
+		this.PID = pID;
+	}
+
+	public String getScriptLog() {
+		return scriptLog;
+	}
+
+	public void setScriptLog(String scriptLog) {
+		this.scriptLog = scriptLog;
+	}
 
 }

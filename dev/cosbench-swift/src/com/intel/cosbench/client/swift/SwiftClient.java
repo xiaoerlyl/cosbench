@@ -123,7 +123,7 @@ public class SwiftClient {
         SwiftResponse response = null;
         try {
 		Logger logger = LogFactory.getSystemLogger();
-		logger.info("Creating container with auth_token " + authToken);
+		logger.debug("Creating container with auth_token " + authToken);
 
             method = HttpClientUtil.makeHttpPut(getContainerPath(container));
             method.setHeader(X_AUTH_TOKEN, authToken);
@@ -131,11 +131,11 @@ public class SwiftClient {
             	method.setHeader(X_STORAGE_POLICY, policy);
             response = new SwiftResponse(client.execute(method));
             if (response.getStatusCode() == SC_CREATED) {
-		logger.info("SUCCESS");
+            	logger.debug("Creating container "+container+" SUCCESS");
                 return;
             }
             if (response.getStatusCode() == SC_ACCEPTED) {
-		logger.info("SUCCESS");
+            	logger.debug("Creating container "+container+" SUCCESS");
                 return;
             }
             throw new SwiftException("unexpected return from server",
@@ -161,7 +161,7 @@ public class SwiftClient {
                         response.getStatusLine());
             if (response.getStatusCode() == SC_CONFLICT)
                 throw new SwiftConflictException(
-                        "cannot delete an non-empty container",
+                        "cannot delete an non-empty container " + container,
                         response.getResponseHeaders(), response.getStatusLine());
             throw new SwiftException("unexpected return from server",
                     response.getResponseHeaders(), response.getStatusLine());
@@ -180,11 +180,33 @@ public class SwiftClient {
             return response.getResponseBodyAsStream();
         response.consumeResposeBody();
         if (response.getStatusCode() == SC_NOT_FOUND)
-            throw new SwiftFileNotFoundException("object not found", response.getResponseHeaders(),
+            throw new SwiftFileNotFoundException("object not found " + container + " / " + object, response.getResponseHeaders(),
                     response.getStatusLine());
         throw new SwiftException("unexpected result from server",
                 response.getResponseHeaders(), response.getStatusLine());
     }
+    
+    public InputStream getTargetList(String container, String object) throws IOException, SwiftException {
+    	if (object.isEmpty())
+    		method = HttpClientUtil.makeHttpGet(getObjectPath(container, object));
+		else
+			method = HttpClientUtil.makeHttpHead(getObjectPath(container, object));
+        method.setHeader(X_AUTH_TOKEN, authToken);
+        SwiftResponse response = new SwiftResponse(client.execute(method));
+        
+        if (response.getStatusCode() == SC_OK) {
+        	if (!object.isEmpty() && response != null)
+				response.consumeResposeBody();
+            return object.isEmpty() ? response.getResponseBodyAsStream()
+            		: new ByteArrayInputStream(new byte[] {});
+        }
+        response.consumeResposeBody();
+        if (response.getStatusCode() == SC_NOT_FOUND)
+            throw new SwiftFileNotFoundException("list target not found " + container + " / " 
+            		+ object, response.getResponseHeaders(), response.getStatusLine());
+        throw new SwiftException("unexpected result from server",
+                response.getResponseHeaders(), response.getStatusLine());
+	}
 
     public void storeObject(String container, String object, byte[] data)
             throws IOException, SwiftException {
@@ -231,7 +253,7 @@ public class SwiftClient {
             if (response.getStatusCode() == SC_ACCEPTED)
                 return;
             if (response.getStatusCode() == SC_NOT_FOUND)
-                throw new SwiftFileNotFoundException("container not found"
+                throw new SwiftFileNotFoundException("container not found " + container  + "/" + object
                         , response.getResponseHeaders(),
                         response.getStatusLine());
             throw new SwiftException("unexpected return from server",
@@ -254,7 +276,7 @@ public class SwiftClient {
             if (!REPORT_DELETE_ERROR)
                 return;
             if (response.getStatusCode() == SC_NOT_FOUND)
-                throw new SwiftFileNotFoundException("object not found",
+                throw new SwiftFileNotFoundException("object not found " + container + "/" + object,
                         response.getResponseHeaders(), response.getStatusLine());
             throw new SwiftException("unexpected return from server",
                     response.getResponseHeaders(), response.getStatusLine());
